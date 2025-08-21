@@ -33,10 +33,10 @@ export const createColumns = (
     },
   },
   {
-    accessorKey: "issueType",
+    accessorKey: "subtitle",
     header: () => <div className="text-center">Issue Type</div>,
     cell: ({ row }) => {
-      const issueType = row.getValue("issueType") as string
+      const issueType = row.getValue("subtitle") as string
       return (
         <div className="text-center px-4 py-2">
           <Badge variant="outline" className="capitalize">

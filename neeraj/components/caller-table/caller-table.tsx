@@ -30,7 +30,7 @@ export function CallerTable() {
       }
 
       const result = await response.json()
-      setData(result.data)
+      setData(result.allCallers || [])
     } catch (error) {
       toast.error("Failed to load caller data")
       console.error("Error fetching callers:", error)

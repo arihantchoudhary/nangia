@@ -1,14 +1,27 @@
 import { NextResponse } from 'next/server';
 
 export async function GET() {
-  // Mock stats data - in a real app, this would query your database
-  const stats = {
-    callsLastWeek: 47,
-    peopleSpokenTo: 23
-  };
+  try {
+    // Proxy to localhost:3002
+    const response = await fetch('https://elevenlabs-calendar-apis.onrender.com/api/stats', {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
 
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 200));
+    if (!response.ok) {
+      throw new Error(`API responded with status: ${response.status}`);
+    }
 
-  return NextResponse.json(stats);
+    const data = await response.json();
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('Error proxying to localhost:3002:', error);
+    
+    // Return default stats on error
+    return NextResponse.json({
+      callsLastWeek: 0,
+      peopleSpokenTo: 0
+    }, { status: 500 });
+  }
 }

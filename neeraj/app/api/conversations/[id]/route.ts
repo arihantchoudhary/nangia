@@ -25,10 +25,16 @@ export async function DELETE(
 
       const responseText = await elevenLabsResponse.text();
       console.log('ElevenLabs response status:', elevenLabsResponse.status);
-      console.log('ElevenLabs response:', responseText);
       
-      if (!elevenLabsResponse.ok && elevenLabsResponse.status !== 404) {
+      if (elevenLabsResponse.status === 404) {
+        console.log('Conversation already deleted from ElevenLabs or does not exist');
+        // This is OK - the conversation might have been deleted already
+      } else if (!elevenLabsResponse.ok) {
         console.error('Failed to delete from ElevenLabs:', elevenLabsResponse.status, responseText);
+        // For non-404 errors, we might want to stop here
+        throw new Error(`ElevenLabs deletion failed: ${responseText}`);
+      } else {
+        console.log('Successfully deleted from ElevenLabs');
       }
     } catch (elevenLabsError) {
       console.error('Error calling ElevenLabs API:', elevenLabsError);

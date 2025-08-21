@@ -197,7 +197,7 @@ export function ConversationDashboard() {
             ) : (
               <>
                 <RefreshCw className="mr-2 h-4 w-4" />
-                Sync with ElevenLabs
+                Sync
               </>
             )}
           </Button>

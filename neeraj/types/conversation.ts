@@ -1,5 +1,5 @@
 export interface Caller {
-  id: number
+  id: number | string
   callerName: string
   title: string
   issueType: string
@@ -13,6 +13,11 @@ export interface Caller {
   phoneNumber: string
   email: string
   transcript: string
+  issueSummary?: string
+  agenda?: string
+  jobTitle?: string
+  meetingType?: string | null
+  created_at?: string
 }
 
 export interface ConversationItem {

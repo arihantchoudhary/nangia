@@ -28,12 +28,12 @@ interface EmailEditorProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   caller: {
-    id: number
+    id: number | string
     callerName: string
     title: string
     issueType: string
   }
-  onSend: (callerId: number) => void
+  onSend: (callerId: number | string) => void
 }
 
 export function EmailEditor({ open, onOpenChange, caller, onSend }: EmailEditorProps) {

@@ -1,4 +1,11 @@
 import { NextResponse } from 'next/server';
+import type { Caller, ConversationItem } from '@/types/conversation';
+
+interface ApiResponse {
+  conversationsByDate: Record<string, ConversationItem[]>;
+  allCallers: Caller[];
+  total: number;
+}
 
 export async function GET() {
   try {
@@ -13,12 +20,12 @@ export async function GET() {
       throw new Error(`API responded with status: ${response.status}`);
     }
 
-    const data = await response.json();
+    const data: ApiResponse = await response.json();
     
     // Transform the data to use issueSummary in title but keep issueType as subtitle
     if (data.conversationsByDate) {
       Object.keys(data.conversationsByDate).forEach(date => {
-        data.conversationsByDate[date] = data.conversationsByDate[date].map((conv: any) => {
+        data.conversationsByDate[date] = data.conversationsByDate[date].map((conv: ConversationItem) => {
           // Update the title to use issueSummary if available
           const summary = conv.fullData?.issueSummary || conv.fullData?.issueType || 'Meeting Request';
           const issueType = conv.fullData?.issueType || 'General Inquiry';
@@ -38,7 +45,7 @@ export async function GET() {
     
     // Also update allCallers array
     if (data.allCallers) {
-      data.allCallers = data.allCallers.map((caller: any) => {
+      data.allCallers = data.allCallers.map((caller: Caller) => {
         const summary = caller.issueSummary || caller.issueType || 'Meeting Request';
         const issueType = caller.issueType || 'General Inquiry';
         return {

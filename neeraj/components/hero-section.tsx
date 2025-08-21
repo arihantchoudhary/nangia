@@ -3,6 +3,7 @@
 import * as React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Phone, Users } from "lucide-react"
+import { useUser } from "@stackframe/stack"
 
 interface StatsData {
   callsLastWeek: number
@@ -10,6 +11,8 @@ interface StatsData {
 }
 
 export function HeroSection() {
+  const user = useUser()
+  const userName = user?.clientMetadata?.name || user?.displayName || "User"
   const [stats, setStats] = React.useState<StatsData>({
     callsLastWeek: 0,
     peopleSpokenTo: 0
@@ -40,7 +43,7 @@ export function HeroSection() {
   return (
     <div className="w-full max-w-4xl mx-auto p-6 space-y-6">
       <div className="text-center space-y-2">
-        <h1 className="text-4xl font-bold tracking-tight">Hello Neeraj</h1>
+        <h1 className="text-4xl font-bold tracking-tight">Hello {userName}</h1>
         <p className="text-muted-foreground text-lg">
           Here&apos;s your assistant&apos;s activity summary
         </p>

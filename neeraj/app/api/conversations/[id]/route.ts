@@ -6,13 +6,44 @@ export async function DELETE(
 ) {
   try {
     const { id: conversationId } = await params;
-    console.log('Deleting conversation:', conversationId);
+    console.log('=== STARTING DELETE OPERATION ===');
+    console.log('Conversation ID:', conversationId);
     
     const apiKey = process.env.ELEVEN_LABS_API_KEY;
-    console.log('API Key exists:', !!apiKey);
+    let elevenLabsDeleted = false;
+    let backendDeleted = false;
     
-    // First, try to delete from ElevenLabs
+    // Step 1: Delete from backend first (it's faster and more reliable)
     try {
+      console.log('Step 1: Deleting from backend...');
+      const backendResponse = await fetch(
+        `https://elevenlabs-calendar-apis.onrender.com/api/conversations/${conversationId}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const backendData = await backendResponse.json();
+      
+      if (backendResponse.ok && backendData.success) {
+        backendDeleted = true;
+        console.log('✅ Successfully deleted from backend');
+      } else if (backendResponse.status === 404) {
+        console.log('⚠️  Conversation not found in backend (already deleted?)');
+        backendDeleted = true; // Consider it deleted
+      } else {
+        console.error('❌ Backend deletion failed:', backendResponse.status, backendData);
+      }
+    } catch (backendError) {
+      console.error('❌ Error calling backend delete:', backendError);
+    }
+    
+    // Step 2: Delete from ElevenLabs
+    try {
+      console.log('Step 2: Deleting from ElevenLabs...');
       const elevenLabsResponse = await fetch(
         `https://api.elevenlabs.io/v1/convai/conversations/${conversationId}`,
         {
@@ -23,52 +54,68 @@ export async function DELETE(
         }
       );
 
-      const responseText = await elevenLabsResponse.text();
-      console.log('ElevenLabs response status:', elevenLabsResponse.status);
-      
-      if (elevenLabsResponse.status === 404) {
-        console.log('Conversation already deleted from ElevenLabs or does not exist');
-        // This is OK - the conversation might have been deleted already
-      } else if (!elevenLabsResponse.ok) {
-        console.error('Failed to delete from ElevenLabs:', elevenLabsResponse.status, responseText);
-        // For non-404 errors, we might want to stop here
-        throw new Error(`ElevenLabs deletion failed: ${responseText}`);
+      if (elevenLabsResponse.ok) {
+        elevenLabsDeleted = true;
+        console.log('✅ Successfully deleted from ElevenLabs');
+      } else if (elevenLabsResponse.status === 404) {
+        console.log('⚠️  Conversation not found in ElevenLabs (already deleted?)');
+        elevenLabsDeleted = true; // Consider it deleted
       } else {
-        console.log('Successfully deleted from ElevenLabs');
+        const errorText = await elevenLabsResponse.text();
+        console.error('❌ ElevenLabs deletion failed:', elevenLabsResponse.status, errorText);
       }
     } catch (elevenLabsError) {
-      console.error('Error calling ElevenLabs API:', elevenLabsError);
-      // Continue anyway to delete from our backend
+      console.error('❌ Error calling ElevenLabs API:', elevenLabsError);
     }
 
-    // Since backend doesn't have delete endpoint, trigger a sync to update the database
-    try {
-      console.log('Triggering sync with ElevenLabs to update backend...');
-      const syncResponse = await fetch(
-        'https://elevenlabs-calendar-apis.onrender.com/api/sync-elevenlabs',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+    // Step 3: If backend deletion failed but ElevenLabs succeeded, trigger sync
+    if (!backendDeleted && elevenLabsDeleted) {
+      try {
+        console.log('Step 3: Backend delete failed, triggering sync...');
+        const syncResponse = await fetch(
+          'https://elevenlabs-calendar-apis.onrender.com/api/sync-elevenlabs',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        if (syncResponse.ok) {
+          console.log('✅ Sync completed - backend should be updated');
+          backendDeleted = true;
         }
-      );
-
-      if (syncResponse.ok) {
-        const syncResult = await syncResponse.json();
-        console.log('Sync successful:', syncResult);
-      } else {
-        console.log('Sync failed but continuing:', syncResponse.status);
+      } catch (syncError) {
+        console.error('❌ Sync failed:', syncError);
       }
-    } catch (syncError) {
-      console.log('Could not sync with backend:', syncError);
-      // This is ok - the main deletion from ElevenLabs succeeded
     }
 
-    // Success if we got this far (ElevenLabs deletion is the main operation)
-    return NextResponse.json({ success: true });
+    // Return results
+    console.log('=== DELETE OPERATION COMPLETE ===');
+    console.log(`Backend deleted: ${backendDeleted}`);
+    console.log(`ElevenLabs deleted: ${elevenLabsDeleted}`);
+    
+    if (backendDeleted || elevenLabsDeleted) {
+      return NextResponse.json({ 
+        success: true,
+        backendDeleted,
+        elevenLabsDeleted,
+        message: 'Conversation deleted successfully'
+      });
+    } else {
+      return NextResponse.json(
+        { 
+          success: false,
+          error: 'Failed to delete from both backend and ElevenLabs',
+          backendDeleted,
+          elevenLabsDeleted
+        },
+        { status: 500 }
+      );
+    }
   } catch (error) {
-    console.error('Error in delete handler:', error);
+    console.error('❌ Critical error in delete handler:', error);
     return NextResponse.json(
       { error: 'Failed to delete conversation', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
